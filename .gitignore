@@ -47,3 +47,9 @@ build/
 /*.md
 /WIP
 *.redb
+
+# TLS certificates (never commit private keys!)
+certs/
+*.pem
+*.key
+*.crt

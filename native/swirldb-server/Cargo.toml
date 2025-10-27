@@ -21,8 +21,13 @@ futures = "0.3"
 
 # HTTP server
 axum = { version = "0.7", features = ["ws"] }
+axum-server = { version = "0.7", features = ["tls-rustls"] }
 tower = "0.4"
 tower-http = { version = "0.5", features = ["cors", "trace"] }
+
+# TLS support
+rustls = "0.23"
+rustls-pemfile = "2.1"
 
 # Storage (pluggable)
 redb = "2"

@@ -28,7 +28,9 @@ use futures::{SinkExt, StreamExt};
 use swirldb_core::protocol::Message;
 use state::{ServerState, ServerStats};
 use std::net::SocketAddr;
-use std::{env, time::Duration};
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::{env, fs, io::BufReader, time::Duration};
 use tokio::time::interval;
 use tower_http::cors::CorsLayer;
 use tracing::{error, info, warn};
@@ -74,16 +76,77 @@ async fn main() -> Result<()> {
     // Spawn heartbeat task
     tokio::spawn(heartbeat_task(server_state.clone()));
 
-    // Start server
-    let addr = SocketAddr::from(([0, 0, 0, 0], ws_port));
-    info!("🌐 WebSocket server listening on ws://{}", addr);
-    info!("📊 HTTP endpoints available on http://localhost:{}", http_port);
-    info!("✅ Server ready for connections");
+    // Check for TLS certificate configuration
+    let tls_cert_path = env::var("TLS_CERT_PATH").ok();
+    let tls_key_path = env::var("TLS_KEY_PATH").ok();
 
-    let listener = tokio::net::TcpListener::bind(addr).await?;
-    axum::serve(listener, app).await?;
+    let addr = SocketAddr::from(([0, 0, 0, 0], ws_port));
+
+    match (tls_cert_path, tls_key_path) {
+        (Some(cert_path), Some(key_path)) => {
+            // TLS mode - load certificates and start HTTPS/WSS server
+            info!("🔒 Starting server with TLS enabled");
+            info!("   Certificate: {}", cert_path);
+            info!("   Private key: {}", key_path);
+
+            let tls_config = load_tls_config(&cert_path, &key_path)?;
+
+            info!("🌐 Secure WebSocket server listening on wss://{}", addr);
+            info!("📊 HTTPS endpoints available on https://localhost:{}", ws_port);
+            info!("✅ Server ready for secure connections");
+
+            axum_server::bind_rustls(addr, tls_config)
+                .serve(app.into_make_service())
+                .await?;
+        }
+        _ => {
+            // No TLS - start plain HTTP/WS server
+            info!("⚠️  Starting server WITHOUT TLS (development mode)");
+            info!("   Set TLS_CERT_PATH and TLS_KEY_PATH environment variables to enable HTTPS/WSS");
+
+            info!("🌐 WebSocket server listening on ws://{}", addr);
+            info!("📊 HTTP endpoints available on http://localhost:{}", ws_port);
+            info!("✅ Server ready for connections");
+
+            let listener = tokio::net::TcpListener::bind(addr).await?;
+            axum::serve(listener, app).await?;
+        }
+    }
 
     Ok(())
+}
+
+/// Load TLS configuration from certificate and key files
+fn load_tls_config(cert_path: &str, key_path: &str) -> Result<axum_server::tls_rustls::RustlsConfig> {
+    use rustls::pki_types::{CertificateDer, PrivateKeyDer};
+
+    // Read certificate file
+    let cert_file = fs::File::open(cert_path)?;
+    let mut cert_reader = BufReader::new(cert_file);
+    let certs: Vec<CertificateDer> = rustls_pemfile::certs(&mut cert_reader)
+        .collect::<Result<Vec<_>, _>>()?;
+
+    if certs.is_empty() {
+        anyhow::bail!("No certificates found in {}", cert_path);
+    }
+
+    // Read private key file
+    let key_file = fs::File::open(key_path)?;
+    let mut key_reader = BufReader::new(key_file);
+
+    // Try reading as PKCS8 first, then RSA
+    let key = rustls_pemfile::private_key(&mut key_reader)?
+        .ok_or_else(|| anyhow::anyhow!("No private key found in {}", key_path))?;
+
+    // Build TLS config
+    let mut config = rustls::ServerConfig::builder()
+        .with_no_client_auth()
+        .with_single_cert(certs, key)?;
+
+    // Enable HTTP/2 and HTTP/1.1
+    config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
+
+    Ok(axum_server::tls_rustls::RustlsConfig::from_config(Arc::new(config)))
 }
 
 /// WebSocket upgrade handler
