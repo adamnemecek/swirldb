@@ -43,7 +43,7 @@ jobs:
       - name: Build WASM package
         run: |
           cd native/swirldb-browser
-          wasm-pack build --target web --out-dir ../../docs/public/wasm -- --enable-bulk-memory
+          wasm-pack build --target web --out-dir ../../docs/public/wasm
 
       - name: Install docs dependencies
         run: |
