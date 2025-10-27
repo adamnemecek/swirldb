@@ -6,6 +6,7 @@ on:
     paths:
       - 'docs/**'
       - 'native/swirldb-core/**'
+      - 'native/swirldb-browser/**'
       - '.github/workflows/deploy-docs.yml'
   workflow_dispatch:
 
