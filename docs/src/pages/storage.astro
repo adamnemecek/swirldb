@@ -1,0 +1,312 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Storage" description="Storage adapters for SwirlDB - pluggable persistence backends">
+  <h1>Storage</h1>
+
+  <p>
+    SwirlDB provides pluggable storage through the <code>DocumentStorage</code> trait for
+    current-state snapshots. CRDT change tracking is handled internally by Automerge.
+  </p>
+
+  <section class="philosophy">
+    <h2>Storage Architecture</h2>
+    <div class="card highlight">
+      <h3>Trait Definitions</h3>
+      <p>All storage adapters implement these platform-agnostic traits:</p>
+      <pre><code>{`trait DocumentStorage {
+    async fn save(&self, key: &str, data: &[u8]) -> Result<()>;
+    async fn load(&self, key: &str) -> Result<Option<Vec<u8>>>;
+    async fn delete(&self, key: &str) -> Result<()>;
+    async fn list_keys(&self) -> Result<Vec<String>>;
+}`}</code></pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>Browser Adapters</h2>
+
+    <div class="card">
+      <h3>In-Memory (Default)</h3>
+      <p>
+        Volatile storage. Data is lost on page reload.
+      </p>
+      <pre><code>{`const db = await SwirlDB.create();
+
+// Data lost on page reload
+db.data.user.name = 'Alice';`}</code></pre>
+      <p><strong>Capacity:</strong> Limited by browser memory (~1-2GB)</p>
+      <p><strong>Use case:</strong> Development, temporary sessions, caching</p>
+    </div>
+
+    <div class="card">
+      <h3>LocalStorage</h3>
+      <p>
+        Key-value storage with synchronous API. Data persists across sessions.
+      </p>
+      <pre><code>{`const db = await SwirlDB.withLocalStorage('my-app');
+
+// Auto-persists to localStorage
+db.data.user.settings = { theme: 'dark' };
+await db.persist();`}</code></pre>
+      <p><strong>Capacity:</strong> ~5-10MB (browser-dependent)</p>
+      <p><strong>Use case:</strong> Small apps, user preferences, offline-first PWAs</p>
+    </div>
+
+    <div class="card">
+      <h3>IndexedDB</h3>
+      <p>
+        Transactional database with asynchronous API. Supports structured data and binary blobs.
+      </p>
+      <pre><code>{`const db = await SwirlDB.withIndexedDB('my-app');
+
+// Handles large datasets
+db.data.documents = largeCollection;
+await db.persist();`}</code></pre>
+      <p><strong>Capacity:</strong> ~50MB-1GB+ (browser quota system)</p>
+      <p><strong>Use case:</strong> Large datasets, offline-first apps, media storage</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Server Adapters</h2>
+
+    <div class="card">
+      <h3>In-Memory (Multi-threaded)</h3>
+      <p>
+        Concurrent in-memory storage with thread-safe access.
+      </p>
+      <pre><code>{`use swirldb_server::storage::MemoryAdapter;
+
+let storage = Arc::new(MemoryAdapter::new());
+let db = SwirlDB::with_storage(storage, "db").await;
+
+// Thread-safe, concurrent access
+tokio::spawn(async move {
+    db.set_path("counter", 1.into()).unwrap();
+});`}</code></pre>
+      <p><strong>Capacity:</strong> Limited by server RAM</p>
+      <p><strong>Use case:</strong> Caching, testing, ephemeral state</p>
+    </div>
+
+    <div class="card">
+      <h3>Redb (Embedded Database)</h3>
+      <p>
+        Embedded database with ACID guarantees and zero-copy reads.
+      </p>
+      <pre><code>{`use swirldb_server::storage::RedbAdapter;
+
+let storage = RedbAdapter::new("./data/swirldb.redb")?;
+let db = SwirlDB::with_storage(Arc::new(storage), "db").await;
+
+// ACID transactions, crash-safe
+db.set_path("user.profile", user_data)?;
+db.persist().await?;  // Durable commit`}</code></pre>
+      <p><strong>Capacity:</strong> Limited by disk space</p>
+      <p><strong>Use case:</strong> Production servers, durable state, embedded systems</p>
+    </div>
+
+    <div class="card">
+      <h3>SQLite (Planned)</h3>
+      <p>
+        SQL database with queryable schema. Supports relational queries alongside CRDT operations.
+      </p>
+      <pre><code>{`use swirldb_server::storage::SqliteAdapter;
+
+let storage = SqliteAdapter::new("./data/swirldb.db")?;
+let db = SwirlDB::with_storage(Arc::new(storage), "db").await;
+
+// SQL queries + CRDT operations
+let results = storage.query("SELECT * FROM documents WHERE created > ?", [timestamp])?;`}</code></pre>
+      <p><strong>Status:</strong> 🔜 Planned</p>
+    </div>
+
+    <div class="card">
+      <h3>S3 / Cloud Storage (Planned)</h3>
+      <p>
+        Object storage adapter. Compatible with AWS S3, Google Cloud Storage,
+        Azure Blob, or S3-compatible backends.
+      </p>
+      <pre><code>{`use swirldb_server::storage::S3Adapter;
+
+let storage = S3Adapter::new("my-bucket", "us-east-1")?;
+let db = SwirlDB::with_storage(Arc::new(storage), "db").await;
+
+db.persist().await?;  // Writes to S3`}</code></pre>
+      <p><strong>Status:</strong> 🔜 Planned</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Integration with Encryption</h2>
+
+    <p>
+      Storage adapters integrate with encryption providers for at-rest protection.
+    </p>
+
+    <div class="card">
+      <h3>Encrypted Storage Example</h3>
+      <pre><code>{`use swirldb_core::encryption::AesGcmProvider;
+use swirldb_server::storage::RedbAdapter;
+
+// Create encrypted storage
+let encryption = AesGcmProvider::new_random();
+let storage = RedbAdapter::new("./data")
+    .with_encryption(encryption);
+
+let db = SwirlDB::with_storage(Arc::new(storage), "db").await;
+
+// All data encrypted before hitting disk
+db.set_path("sensitive.data", secret_value)?;
+db.persist().await?;  // Encrypted write to redb`}</code></pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>Custom Storage Adapters</h2>
+
+    <p>
+      Implement the <code>DocumentStorage</code> trait to create
+      custom backends for your specific needs.
+    </p>
+
+    <div class="card">
+      <h3>Example: Redis Adapter</h3>
+      <pre><code>{`use swirldb_core::storage::{DocumentStorage, DocumentStorageMarker};
+use async_trait::async_trait;
+
+struct RedisStorage {
+    client: redis::Client,
+}
+
+impl DocumentStorageMarker for RedisStorage {}
+
+#[async_trait]
+impl DocumentStorage for RedisStorage {
+    async fn save(&self, key: &str, data: &[u8]) -> Result<()> {
+        let mut conn = self.client.get_async_connection().await?;
+        redis::cmd("SET")
+            .arg(key)
+            .arg(data)
+            .query_async(&mut conn)
+            .await?;
+        Ok(())
+    }
+
+    async fn load(&self, key: &str) -> Result<Option<Vec<u8>>> {
+        let mut conn = self.client.get_async_connection().await?;
+        let result: Option<Vec<u8>> = redis::cmd("GET")
+            .arg(key)
+            .query_async(&mut conn)
+            .await?;
+        Ok(result)
+    }
+
+    // Implement delete, list_keys...
+}`}</code></pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>Performance Characteristics</h2>
+
+    <div class="card">
+      <h3>Browser Storage Comparison</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr style="border-bottom: 2px solid #667eea;">
+          <th style="text-align: left; padding: 0.5rem;">Adapter</th>
+          <th style="text-align: left; padding: 0.5rem;">Capacity</th>
+          <th style="text-align: left; padding: 0.5rem;">Speed</th>
+          <th style="text-align: left; padding: 0.5rem;">API</th>
+        </tr>
+        <tr style="border-bottom: 1px solid #e1e1e1;">
+          <td style="padding: 0.5rem;">In-Memory</td>
+          <td style="padding: 0.5rem;">~1-2GB</td>
+          <td style="padding: 0.5rem;">Fastest</td>
+          <td style="padding: 0.5rem;">Sync</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e1e1e1;">
+          <td style="padding: 0.5rem;">LocalStorage</td>
+          <td style="padding: 0.5rem;">~5-10MB</td>
+          <td style="padding: 0.5rem;">Fast</td>
+          <td style="padding: 0.5rem;">Sync</td>
+        </tr>
+        <tr>
+          <td style="padding: 0.5rem;">IndexedDB</td>
+          <td style="padding: 0.5rem;">~50MB-1GB+</td>
+          <td style="padding: 0.5rem;">Moderate</td>
+          <td style="padding: 0.5rem;">Async</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Server Storage Comparison</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr style="border-bottom: 2px solid #667eea;">
+          <th style="text-align: left; padding: 0.5rem;">Adapter</th>
+          <th style="text-align: left; padding: 0.5rem;">Capacity</th>
+          <th style="text-align: left; padding: 0.5rem;">Durability</th>
+          <th style="text-align: left; padding: 0.5rem;">Use Case</th>
+        </tr>
+        <tr style="border-bottom: 1px solid #e1e1e1;">
+          <td style="padding: 0.5rem;">In-Memory</td>
+          <td style="padding: 0.5rem;">Limited by RAM</td>
+          <td style="padding: 0.5rem;">❌ Volatile</td>
+          <td style="padding: 0.5rem;">Caching, testing</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e1e1e1;">
+          <td style="padding: 0.5rem;">Redb</td>
+          <td style="padding: 0.5rem;">Limited by disk</td>
+          <td style="padding: 0.5rem;">✅ ACID</td>
+          <td style="padding: 0.5rem;">Production, embedded</td>
+        </tr>
+        <tr>
+          <td style="padding: 0.5rem;">SQLite</td>
+          <td style="padding: 0.5rem;">Limited by disk</td>
+          <td style="padding: 0.5rem;">✅ ACID</td>
+          <td style="padding: 0.5rem;">Queryable, portable</td>
+        </tr>
+      </table>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .card {
+    background: white;
+    border: 1px solid #e1e1e1;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .card.highlight {
+    border-left: 4px solid #667eea;
+    background: #f9f9ff;
+    padding: 2rem;
+  }
+
+  .philosophy {
+    margin: 2rem 0;
+  }
+
+  ul {
+    margin-left: 2rem;
+    margin-top: 0.5rem;
+  }
+
+  li {
+    margin: 0.5rem 0;
+  }
+
+  section {
+    margin: 3rem 0;
+  }
+
+  table {
+    margin-top: 1rem;
+  }
+</style>

@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat Client</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: #f5f5f5;
+    }
+
+    .header {
+      background: #fff;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid #e0e0e0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .header h1 {
+      font-size: 1rem;
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .transport-toggle {
+      display: flex;
+      background: #f0f0f0;
+      border-radius: 6px;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .transport-toggle button {
+      padding: 0.35rem 0.75rem;
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #666;
+    }
+
+    .transport-toggle button.active {
+      background: #007aff;
+      color: white;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .transport-toggle button:hover:not(.active) {
+      background: rgba(0,0,0,0.05);
+    }
+
+    .status {
+      font-size: 0.85rem;
+      color: #666;
+    }
+
+    .status.connected {
+      color: #4caf50;
+    }
+
+    .status.disconnected {
+      color: #f44336;
+    }
+
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .message {
+      display: flex;
+      flex-direction: column;
+      max-width: 70%;
+    }
+
+    .message.own {
+      align-self: flex-end;
+    }
+
+    .message.other {
+      align-self: flex-start;
+    }
+
+    .message-header {
+      font-size: 0.75rem;
+      color: #666;
+      margin-bottom: 0.25rem;
+      padding: 0 0.5rem;
+    }
+
+    .message-bubble {
+      padding: 0.75rem 1rem;
+      border-radius: 18px;
+      word-wrap: break-word;
+    }
+
+    .message.own .message-bubble {
+      background: #007aff;
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message.other .message-bubble {
+      background: #e5e5ea;
+      color: black;
+      border-bottom-left-radius: 4px;
+    }
+
+    .message-time {
+      font-size: 0.7rem;
+      opacity: 0.7;
+      margin-top: 0.25rem;
+    }
+
+    .input-container {
+      background: #fff;
+      border-top: 1px solid #e0e0e0;
+      padding: 0.75rem 1rem;
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .input-container input {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      border: 1px solid #e0e0e0;
+      border-radius: 20px;
+      font-size: 0.95rem;
+      outline: none;
+    }
+
+    .input-container input:focus {
+      border-color: #007aff;
+    }
+
+    .input-container button {
+      padding: 0.75rem 1.5rem;
+      background: #007aff;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .input-container button:hover {
+      background: #0051d5;
+    }
+
+    .input-container button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .settings-panel {
+      background: #f9f9f9;
+      border-top: 1px solid #e0e0e0;
+      padding: 0.75rem 1rem;
+      font-size: 0.85rem;
+    }
+
+    .settings-panel summary {
+      cursor: pointer;
+      font-weight: 600;
+      color: #666;
+      user-select: none;
+      padding: 0.25rem 0;
+    }
+
+    .settings-panel summary:hover {
+      color: #007aff;
+    }
+
+    .settings-content {
+      margin-top: 0.75rem;
+      padding: 0.75rem;
+      background: white;
+      border-radius: 8px;
+      border: 1px solid #e0e0e0;
+    }
+
+    .setting-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .setting-item:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .setting-label {
+      color: #333;
+      font-weight: 500;
+    }
+
+    .setting-description {
+      font-size: 0.75rem;
+      color: #666;
+      margin-top: 0.25rem;
+    }
+
+    .setting-control select {
+      padding: 0.35rem 0.5rem;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      background: white;
+      cursor: pointer;
+    }
+
+    .setting-control input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+
+    .hint-badge {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      background: #e3f2fd;
+      color: #1976d2;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      margin-left: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1 id="client-name">Chat Client</h1>
+    <div class="header-right">
+      <!-- Transport toggle temporarily disabled - WebSocket only -->
+      <!-- <div class="transport-toggle">
+        <button id="ws-btn" class="active">WebSocket</button>
+        <button id="http-btn">HTTP</button>
+      </div> -->
+      <span class="status disconnected" id="status">Disconnected</span>
+    </div>
+  </div>
+
+  <div class="messages" id="messages">
+    <!-- Messages will be rendered here -->
+  </div>
+
+  <div class="input-container">
+    <input
+      type="text"
+      id="message-input"
+      placeholder="Type a message..."
+      disabled
+    />
+    <button id="send-btn" disabled>Send</button>
+  </div>
+
+  <details class="settings-panel">
+    <summary>⚙️ Settings <span class="hint-badge">UPSTREAM-ONLY</span></summary>
+    <div class="settings-content">
+      <div class="setting-item">
+        <div>
+          <div class="setting-label">Preferred Transport</div>
+          <div class="setting-description">Your default connection method (synced to server only)</div>
+        </div>
+        <div class="setting-control">
+          <select id="pref-transport">
+            <option value="websocket">WebSocket</option>
+            <option value="http">HTTP Long-Polling</option>
+          </select>
+        </div>
+      </div>
+      <div class="setting-item">
+        <div>
+          <div class="setting-label">Message Notifications</div>
+          <div class="setting-description">Show browser notifications for new messages</div>
+        </div>
+        <div class="setting-control">
+          <input type="checkbox" id="pref-notifications" />
+        </div>
+      </div>
+      <div class="setting-item">
+        <div>
+          <div class="setting-label">Storage Backend</div>
+          <div class="setting-description">Choose where to persist your data locally</div>
+        </div>
+        <div class="setting-control">
+          <select id="pref-storage">
+            <option value="indexeddb">IndexedDB (recommended)</option>
+            <option value="localstorage">localStorage (5-10MB limit)</option>
+            <option value="memory">Memory only (ephemeral)</option>
+          </select>
+        </div>
+      </div>
+      <div class="setting-item">
+        <div>
+          <div class="setting-label">Debug Mode <span class="hint-badge">GLOBAL</span></div>
+          <div class="setting-description">Include human-readable JSON in network traffic for inspection</div>
+        </div>
+        <div class="setting-control">
+          <input type="checkbox" id="global-debug-mode" />
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <script type="module">
+    import { SwirlDB } from '/swirldb.js';
+
+    // Get client ID from URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const clientId = urlParams.get('id') || 'unknown';
+    const roomId = 'general';
+
+    document.getElementById('client-name').textContent = `Chat - ${clientId}`;
+
+    // Transport layer abstraction
+    let currentTransport = 'websocket'; // 'websocket' or 'http'
+    let ws = null;
+    let pollInterval = null;
+
+    // Initialize database with IndexedDB
+    let db;
+    let connected = false;
+
+    const messagesEl = document.getElementById('messages');
+    const inputEl = document.getElementById('message-input');
+    const sendBtn = document.getElementById('send-btn');
+    const statusEl = document.getElementById('status');
+    // Transport toggle disabled - WebSocket only
+    // const wsBtnEl = document.getElementById('ws-btn');
+    // const httpBtnEl = document.getElementById('http-btn');
+    const prefTransportEl = document.getElementById('pref-transport');
+    const prefNotificationsEl = document.getElementById('pref-notifications');
+    const prefStorageEl = document.getElementById('pref-storage');
+    const globalDebugModeEl = document.getElementById('global-debug-mode');
+
+    // Settings namespace for this client (upstream-only sync)
+    const PREFS_KEY = `user_${clientId}_prefs`;
+
+    // Global debug mode (stored in localStorage, shared across all clients in this browser)
+    const GLOBAL_DEBUG_KEY = 'swirldb-debug-mode';
+    let debugMode = localStorage.getItem(GLOBAL_DEBUG_KEY) === 'true';
+
+    /**
+     * Initialize settings system with storage hints
+     *
+     * This demonstrates how to use SwirlDB's hint system:
+     * - Storage hint: "persisted" (save to IndexedDB)
+     * - Sync hint: "upstream-only" (sync to server but NOT broadcast to other clients)
+     *
+     * Each client has their own /user/{clientId}/prefs namespace that:
+     * 1. Persists locally in IndexedDB
+     * 2. Syncs to the server for backup
+     * 3. Does NOT sync to other clients (privacy)
+     */
+    function initSettings() {
+      console.log(`⚙️ Initializing settings at path: ${PREFS_KEY}`);
+
+      // Set storage hint: persist to IndexedDB
+      // NOTE: This is conceptual - the actual API will be implemented in the Rust core
+      // For now, we're demonstrating the intended usage pattern
+      if (typeof db.setStorageHint === 'function') {
+        db.setStorageHint(`${PREFS_KEY}.transport`, 'persisted');
+        db.setStorageHint(`${PREFS_KEY}.notifications`, 'persisted');
+        console.log('✅ Storage hints set: persisted');
+      }
+
+      console.log('🔍 Setting UI defaults...');
+      // Initialize with defaults (settings will persist after first save)
+      currentTransport = 'websocket';
+      // Transport toggle disabled - WebSocket only
+      // wsBtnEl.classList.add('active');
+      // httpBtnEl.classList.remove('active');
+      prefTransportEl.value = 'websocket';
+      prefNotificationsEl.checked = false;
+      prefStorageEl.value = 'indexeddb';
+      console.log('✅ UI defaults set');
+
+      console.log('🔍 Initializing global debug mode...');
+      // Initialize global debug mode (from localStorage, not DB)
+      globalDebugModeEl.checked = debugMode;
+      if (debugMode) {
+        console.log(`🐛 Debug mode enabled (global, applies to all clients in this browser)`);
+      }
+      console.log('✅ Debug mode initialized');
+
+      console.log('🔍 Setting up event listeners...');
+      // Set up change listeners
+      prefTransportEl.addEventListener('change', async (e) => {
+        const newTransport = e.target.value;
+
+        recentMutations.length = 0;
+        db.data[PREFS_KEY].transport = newTransport;
+        recentMutations.push({ key: `${PREFS_KEY}.transport`, value: newTransport });
+
+        db.persist();
+        console.log(`💾 Saved preferred transport: ${newTransport} [${PREFS_KEY}]`);
+        console.log(`📊 Namespace: ${PREFS_KEY} (upstream-only, not broadcast to other clients)`);
+
+        // Switch to the selected transport
+        if (newTransport !== currentTransport) {
+          await switchTransport(newTransport);
+        }
+
+        // TODO: In production, this would sync to server with "upstream-only" hint
+        // The server would store it but NOT broadcast to other clients
+      });
+
+      prefNotificationsEl.addEventListener('change', (e) => {
+        const checked = e.target.checked;
+        db.data[PREFS_KEY].notifications = checked;
+        db.persist();
+        console.log(`💾 Saved notifications: ${checked} [${PREFS_KEY}]`);
+
+        if (checked) {
+          requestNotificationPermission();
+        }
+      });
+
+      prefStorageEl.addEventListener('change', (e) => {
+        const newBackend = e.target.value;
+        db.data[PREFS_KEY].storageBackend = newBackend;
+        db.persist();
+        console.log(`💾 Saved storage backend: ${newBackend} [${PREFS_KEY}]`);
+        console.log(`⚠️  Note: To apply this change, reload the page.`);
+
+        // Show a notice to reload
+        if (confirm(`Switch to ${newBackend}? The page will reload to apply this change.`)) {
+          // Store preference in temporary sessionStorage to use on next load
+          sessionStorage.setItem('pendingStorageBackend', newBackend);
+          location.reload();
+        } else {
+          // Revert selection
+          prefStorageEl.value = 'indexeddb';
+        }
+      });
+
+      // Global debug mode toggle (affects ALL clients in this browser)
+      globalDebugModeEl.addEventListener('change', (e) => {
+        debugMode = e.target.checked;
+        localStorage.setItem(GLOBAL_DEBUG_KEY, debugMode.toString());
+
+        if (debugMode) {
+          console.log(`🐛 Debug mode ENABLED (global)`);
+          console.log(`   → Binary messages will include human-readable JSON metadata`);
+          console.log(`   → Open Network tab to inspect message contents`);
+        } else {
+          console.log(`🐛 Debug mode DISABLED (global)`);
+          console.log(`   → Binary-only protocol (production mode)`);
+        }
+      });
+
+      console.log(`✅ Settings initialized at namespace: ${PREFS_KEY}`);
+    }
+
+    async function requestNotificationPermission() {
+      if ('Notification' in window && Notification.permission === 'default') {
+        const permission = await Notification.requestPermission();
+        console.log(`🔔 Notification permission: ${permission}`);
+      }
+    }
+
+    async function init() {
+      try {
+        // Always start with IndexedDB for now (storage backend switching can come later)
+        db = await SwirlDB.withIndexedDB(`chat-${clientId}`);
+        console.log('✅ Database initialized');
+
+        console.log('🔍 Initializing messages array...');
+        // Initialize messages array if it doesn't exist
+        // Now using native array support - arrays become Automerge Lists!
+        try {
+          console.log('🔍 Checking if messages exist...');
+          const existing = db.data.messages.$value;
+          console.log('🔍 Messages exist:', existing, 'Type:', typeof existing);
+
+          // Migration: Convert old JSON string format to native array
+          if (typeof existing === 'string') {
+            console.log('🔄 Migrating old JSON string format to native array...');
+            try {
+              const parsedMessages = JSON.parse(existing);
+              db.data.messages = parsedMessages; // Convert to native array
+              console.log('✅ Migrated', parsedMessages.length, 'messages to native array format');
+            } catch (e) {
+              console.error('❌ Failed to parse old message format:', e);
+              db.data.messages = []; // Reset to empty array
+            }
+          } else if (!existing) {
+            console.log('🔍 Creating empty messages array (native array)...');
+            db.data.messages = []; // Native array with proper CRDT support!
+          }
+        } catch (e) {
+          console.log('🔍 Messages don\'t exist (caught error):', e.message);
+          // messages doesn't exist yet, create it as native array
+          db.data.messages = [];
+        }
+        console.log('✅ Messages array initialized');
+
+        console.log('🔍 About to call initSettings()...');
+        // Initialize settings FIRST (loads saved transport preference)
+        initSettings();
+        console.log('✅ initSettings() completed');
+
+        // Set up observer to auto-render messages when they change
+        // This enables reactive updates when WASM receives server changes
+        db.data.messages.$observe(() => {
+          console.log('📊 Messages changed, re-rendering...');
+          renderMessages();
+        });
+
+        // Connect to sync server with saved preference
+        await connectToServer();
+
+        // Render existing messages
+        renderMessages();
+
+        // Enable input
+        inputEl.disabled = false;
+        sendBtn.disabled = false;
+
+        // Set up event listeners
+        inputEl.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+          }
+        });
+
+        sendBtn.addEventListener('click', sendMessage);
+
+        // Transport toggle disabled - WebSocket only
+        // wsBtnEl.addEventListener('click', () => switchTransport('websocket'));
+        // httpBtnEl.addEventListener('click', () => switchTransport('http'));
+
+      } catch (error) {
+        console.error('❌ Initialization failed:', error);
+        statusEl.textContent = 'Error';
+        statusEl.className = 'status disconnected';
+      }
+    }
+
+    // Transport abstraction layer
+    async function connectToServer() {
+      if (currentTransport === 'websocket') {
+        return connectWebSocket();
+      } else {
+        return connectHTTP();
+      }
+    }
+
+    async function connectWebSocket() {
+      try {
+        console.log('✅ Connecting via WebSocket (WASM-managed)');
+
+        // WASM now manages WebSocket internally!
+        // Just call connect() with URL, client ID, and subscriptions
+        db.connect('ws://demo.swirldb.org:3030/ws', clientId, ['/**']);
+
+        // Update UI
+        connected = true;
+        statusEl.textContent = 'Connected (WS)';
+        statusEl.className = 'status connected';
+
+        // Note: Initial sync is handled automatically by the WASM layer
+        // when the WebSocket connection opens (server sends MSG_SYNC)
+
+      } catch (error) {
+        console.error('❌ WebSocket connection error:', error);
+        statusEl.textContent = 'Error';
+        statusEl.className = 'status disconnected';
+        throw error;
+      }
+    }
+
+    async function connectHTTP() {
+      try {
+        // Initial connect to get existing messages
+        const response = await fetch('http://demo.swirldb.org:3030/sync/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            client_id: clientId,
+            namespace_id: roomId
+          })
+        });
+
+        const data = await response.json();
+        console.log(`✅ Connected via HTTP, received ${data.count} CRDT changes`);
+
+        // Apply incoming CRDT changes (binary Automerge format)
+        if (data.changes && data.changes.length > 0) {
+          const allChanges = data.changes.map(changeArray => new Uint8Array(changeArray));
+          try {
+            db.applyChanges(allChanges);
+            console.log(`✅ Merged ${allChanges.length} CRDT changes via HTTP`);
+          } catch (e) {
+            console.error('❌ Failed to apply CRDT changes:', e);
+          }
+        }
+        renderMessages();
+
+        connected = true;
+        statusEl.textContent = 'Connected (HTTP)';
+        statusEl.className = 'status connected';
+
+        // Push local CRDT state to server for initial sync
+        console.log('📤 Pushing local CRDT state to server for initial sync');
+        await broadcastCRDTState();
+
+        // Start long-polling
+        startPolling();
+      } catch (error) {
+        console.error('❌ HTTP connection error:', error);
+        statusEl.textContent = 'Error';
+        statusEl.className = 'status disconnected';
+        throw error;
+      }
+    }
+
+    function startPolling() {
+      if (pollInterval) return;
+
+      const poll = async () => {
+        if (!connected || currentTransport !== 'http') return;
+
+        try {
+          const response = await fetch(
+            `http://demo.swirldb.org:3030/sync/poll?client_id=${clientId}&namespace_id=${roomId}&timeout=25000`,
+            { method: 'GET' }
+          );
+
+          const data = await response.json();
+
+          if (data.changes && data.changes.length > 0) {
+            console.log(`📥 Received ${data.changes.length} CRDT change(s) via HTTP`);
+            const allChanges = data.changes.map(changeArray => new Uint8Array(changeArray));
+            try {
+              db.applyChanges(allChanges);
+              console.log(`✅ Merged ${allChanges.length} CRDT changes via HTTP poll`);
+            } catch (e) {
+              console.error('❌ Failed to apply CRDT changes:', e);
+            }
+            renderMessages();
+          }
+
+          // Continue polling
+          if (connected && currentTransport === 'http') {
+            setTimeout(poll, 100); // Small delay before next poll
+          }
+        } catch (error) {
+          console.error('❌ Polling error:', error);
+          if (connected && currentTransport === 'http') {
+            setTimeout(poll, 2000); // Retry after error
+          }
+        }
+      };
+
+      poll();
+    }
+
+    function stopPolling() {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+    }
+
+    // Transport switching disabled - WebSocket only
+    /*
+    async function switchTransport(newTransport) {
+      if (newTransport === currentTransport) return;
+
+      console.log(`🔄 Switching transport from ${currentTransport} to ${newTransport}`);
+
+      // Save preference
+      db.data[PREFS_KEY].transport = newTransport;
+      prefTransportEl.value = newTransport;
+      db.persist();
+      console.log(`💾 Saved transport preference: ${newTransport}`);
+
+      // Disconnect current transport
+      if (ws) {
+        ws.close();
+        ws = null;
+      }
+      stopPolling();
+      connected = false;
+
+      // Update UI
+      currentTransport = newTransport;
+      if (newTransport === 'websocket') {
+        wsBtnEl.classList.add('active');
+        httpBtnEl.classList.remove('active');
+      } else {
+        httpBtnEl.classList.add('active');
+        wsBtnEl.classList.remove('active');
+      }
+
+      statusEl.textContent = 'Connecting...';
+      statusEl.className = 'status disconnected';
+
+      // Connect with new transport
+      try {
+        await connectToServer();
+      } catch (error) {
+        console.error('❌ Failed to switch transport:', error);
+        statusEl.textContent = 'Error';
+        statusEl.className = 'status disconnected';
+      }
+    }
+    */
+
+
+    function sendMessage() {
+      const text = inputEl.value.trim();
+      if (!text || !connected) return;
+
+      // Add message to local database
+      const message = {
+        id: `${clientId}-${Date.now()}`,
+        from: clientId,
+        text,
+        timestamp: Date.now()
+      };
+
+      // Track mutations for debug output
+      const mutations = [];
+
+      // Get current messages array (native array with CRDT support!)
+      const messages = db.data.messages.$value || [];
+      const newMessages = [...messages, message];
+
+      // Update messages array in CRDT (native array - each element is a separate CRDT change!)
+      db.data.messages = newMessages;
+      mutations.push({
+        key: 'messages',
+        value: `array[${newMessages.length}] (+1 message from ${clientId})`
+      });
+
+      // Store mutations for next broadcast
+      recentMutations.length = 0; // Clear previous
+      recentMutations.push(...mutations);
+
+      // Persist to IndexedDB
+      db.persist();
+
+      // Send CRDT changes to server
+      if (currentTransport === 'websocket') {
+        // WebSocket: WASM handles protocol internally
+        db.syncChanges();
+      } else {
+        // HTTP: Manual sync (WASM only manages WebSocket)
+        broadcastCRDTStateHTTP();
+      }
+
+      // Clear input
+      inputEl.value = '';
+
+      // Re-render
+      renderMessages();
+    }
+
+    // Track recent mutations for debug output
+    const recentMutations = [];
+
+    async function broadcastCRDTStateHTTP() {
+      // Get all CRDT changes (individual Automerge change objects)
+      const allChanges = db.getChanges();
+
+      if (allChanges.length === 0) {
+        console.log('ℹ️  No changes to broadcast');
+        return;
+      }
+
+      // HTTP: REST POST with CRDT changes
+      const requestBody = {
+        client_id: clientId,
+        namespace_id: roomId,
+        changes: allChanges.map(c => Array.from(c))
+      };
+
+      // Debug mode: Add human-readable metadata (server ignores this field)
+      if (debugMode) {
+        const messages = db.data.messages.$value || [];
+        requestBody._debug = {
+          message: 'This field is for debugging only - server ignores it',
+          changes_count: allChanges.length,
+          total_size: allChanges.reduce((sum, c) => sum + c.length, 0) + ' bytes',
+          message_count: messages.length,
+          recent_mutations: recentMutations.slice(0, 20), // Show up to 20 mutations
+          client: clientId,
+          timestamp: new Date().toISOString()
+        };
+        console.log(`🐛 [DEBUG] HTTP PUSH (${allChanges.length} changes):`, requestBody._debug);
+      }
+
+      try {
+        await fetch('http://demo.swirldb.org:3030/sync/push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody)
+        });
+      } catch (error) {
+        console.error('❌ Failed to push via HTTP:', error);
+      }
+    }
+
+    // WebSocket message handling is now done internally by WASM!
+    // The protocol encoding/decoding, head tracking, and change merging
+    // all happen in Rust code. We just need to observe changes via the
+    // reactive observer system.
+
+    function renderMessages() {
+      // Read the messages array from the CRDT (native array with proper CRDT support!)
+      const messagesValue = db.data.messages.$value || [];
+      // Ensure it's a proper JavaScript array (in case getValue returns array-like object)
+      const messages = Array.isArray(messagesValue) ? messagesValue : Array.from(messagesValue);
+
+      messagesEl.innerHTML = messages
+        .sort((a, b) => a.timestamp - b.timestamp)
+        .map(msg => {
+          const isOwn = msg.from === clientId;
+          const time = new Date(msg.timestamp).toLocaleTimeString();
+
+          return `
+            <div class="message ${isOwn ? 'own' : 'other'}">
+              ${!isOwn ? `<div class="message-header">${msg.from}</div>` : ''}
+              <div class="message-bubble">
+                ${escapeHtml(msg.text)}
+              </div>
+              <div class="message-time">${time}</div>
+            </div>
+          `;
+        })
+        .join('');
+
+      // Scroll to bottom
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Binary helpers
+    function readUint32(buffer, offset) {
+      return (buffer[offset] << 24) |
+             (buffer[offset + 1] << 16) |
+             (buffer[offset + 2] << 8) |
+             buffer[offset + 3];
+    }
+
+    function writeUint32(buffer, offset, value) {
+      buffer[offset] = (value >>> 24) & 0xFF;
+      buffer[offset + 1] = (value >>> 16) & 0xFF;
+      buffer[offset + 2] = (value >>> 8) & 0xFF;
+      buffer[offset + 3] = value & 0xFF;
+    }
+
+    // Initialize on load
+    init();
+  </script>
+</body>
+</html>
