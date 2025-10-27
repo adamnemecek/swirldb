@@ -1,13 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <defs>
     <linearGradient id="purpleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+      <stop offset="0%" style="stop-color:#6B8EFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#667eea;stop-opacity:1" />
     </linearGradient>
   </defs>
 
-  <!-- Swirl shape resembling 🌀 emoji -->
-  <path d="M50,10 Q70,20 75,40 Q80,60 70,75 Q60,85 45,82 Q30,79 25,65 Q20,51 28,40 Q36,29 48,30 Q58,31 62,40 Q65,48 60,56 Q55,62 48,60 Q42,58 40,52 Q38,47 42,44 Q45,42 48,44"
+  <!-- Swirl shape resembling 🌀 emoji (flipped horizontally) -->
+  <path d="M50,10 Q30,20 25,40 Q20,60 30,75 Q40,85 55,82 Q70,79 75,65 Q80,51 72,40 Q64,29 52,30 Q42,31 38,40 Q35,48 40,56 Q45,62 52,60 Q58,58 60,52 Q62,47 58,44 Q55,42 52,44"
         fill="none"
         stroke="url(#purpleGradient)"
         stroke-width="8"
