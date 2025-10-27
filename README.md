@@ -7,6 +7,8 @@ Cross-platform CRDT database built on Automerge. Runs in browsers via WebAssembl
 > SwirlDB is in early development and not ready for production use.
 > The API is unstable and subject to breaking changes.
 
+📚 **[Full Documentation](https://docs.swirldb.org)**
+
 ## Design
 
 - **CRDT-based**: Built on Automerge for automatic conflict resolution
