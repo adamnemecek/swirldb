@@ -27,6 +27,7 @@ sha2 = "0.10"
 # Random number generation
 getrandom = { version = "0.2", features = ["js"] }
 rand = "0.8"
+uuid = { version = "1.18", features = ["v4", "js"] }  # js feature required for WASM
 
 [dev-dependencies]
 futures = "0.3"
