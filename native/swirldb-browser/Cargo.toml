@@ -67,4 +67,4 @@ panic = "abort"           # Don't include unwinding code
 strip = true              # Strip symbols
 
 [package.metadata.wasm-pack.profile.release]
-wasm-opt = ["-O", "--enable-bulk-memory"]
+wasm-opt = ["-O", "--enable-bulk-memory", "--enable-nontrapping-float-to-int"]
