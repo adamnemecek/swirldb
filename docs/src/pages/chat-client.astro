@@ -374,6 +374,21 @@
     const GLOBAL_DEBUG_KEY = 'swirldb-debug-mode';
     let debugMode = localStorage.getItem(GLOBAL_DEBUG_KEY) === 'true';
 
+    // Protocol-aware URL helpers
+    // Use secure protocols (wss://, https://) when page is HTTPS, insecure otherwise
+    const isSecure = window.location.protocol === 'https:';
+    const WS_PROTOCOL = isSecure ? 'wss:' : 'ws:';
+    const HTTP_PROTOCOL = isSecure ? 'https:' : 'http:';
+    const SERVER_HOST = 'demo.swirldb.org:3030';
+
+    function getWebSocketUrl(path) {
+      return `${WS_PROTOCOL}//${SERVER_HOST}${path}`;
+    }
+
+    function getHttpUrl(path) {
+      return `${HTTP_PROTOCOL}//${SERVER_HOST}${path}`;
+    }
+
     /**
      * Initialize settings system with storage hints
      *
@@ -587,7 +602,7 @@
 
         // WASM now manages WebSocket internally!
         // Just call connect() with URL, client ID, and subscriptions
-        db.connect('ws://demo.swirldb.org:3030/ws', clientId, ['/**']);
+        db.connect(getWebSocketUrl('/ws'), clientId, ['/**']);
 
         // Update UI
         connected = true;
@@ -608,7 +623,7 @@
     async function connectHTTP() {
       try {
         // Initial connect to get existing messages
-        const response = await fetch('http://demo.swirldb.org:3030/sync/connect', {
+        const response = await fetch(getHttpUrl('/sync/connect'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -658,7 +673,7 @@
 
         try {
           const response = await fetch(
-            `http://demo.swirldb.org:3030/sync/poll?client_id=${clientId}&namespace_id=${roomId}&timeout=25000`,
+            `${getHttpUrl('/sync/poll')}?client_id=${clientId}&namespace_id=${roomId}&timeout=25000`,
             { method: 'GET' }
           );
 
@@ -828,7 +843,7 @@
       }
 
       try {
-        await fetch('http://demo.swirldb.org:3030/sync/push', {
+        await fetch(getHttpUrl('/sync/push'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(requestBody)
